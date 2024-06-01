@@ -13,7 +13,9 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "gm": "^1.25.0",
-    "node-telegram-bot-api": "^0.66.0"
+    "node-telegram-bot-api": "^0.66.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.64.6",

@@ -1,11 +1,22 @@
-import fs from "fs";
-import imagemagic from "gm";
+// import fs from "fs";
+// import imagemagic from "gm";
 import TelegramBot from "node-telegram-bot-api";
 import dotenv from "dotenv";
+import {
+  afterWordAddOptions,
+  initialOptions,
+  startAgainOptions,
+  wordOptions,
+} from "./optionsSet";
+import { addNewWord, getAllWords } from "./db";
+
 dotenv.config();
 
 const BOT_API = process.env.BOT_API;
-console.log(BOT_API);
+const bot = new TelegramBot(BOT_API, {
+  polling: true,
+});
+
 let initialData = [
   {
     word: "home",
@@ -17,22 +28,8 @@ let initialData = [
     translate: "стол",
   },
 ];
-
-const bot = new TelegramBot(BOT_API, {
-  polling: true,
-});
-
-let options = {
-  parse_mode: "HTML",
-  reply_markup: JSON.stringify({
-    inline_keyboard: [
-      [{ text: "Далее", callback_data: "next" }],
-      [{ text: "Стоп", callback_data: "stop" }],
-    ],
-  }),
-};
-
 let counter = 0;
+
 let messageCreator = function (wordNumber) {
   let text = "";
   if (initialData[wordNumber]) {
@@ -44,29 +41,76 @@ let messageCreator = function (wordNumber) {
 bot.on("text", async (msg) => {
   try {
     if (msg.text == "/start") {
-      await bot.sendMessage(msg.chat.id, messageCreator(counter++), options);
+      msg.chat.username;
+      await bot.sendMessage(
+        msg.chat.id,
+        `Привет ${msg.chat.username}, это бот для изучения слов на иностранном языке, добавляй новые слова и бот будет присылать их тебе на проверку`,
+        initialOptions
+      );
+      return;
     }
+
+    if (msg.text.includes(",")) {
+      let word = msg.text.split(",");
+      addNewWord(msg.chat.id, word[0], word[1]);
+      await bot.sendMessage(
+        msg.chat.id,
+        "Слово добавлено",
+        afterWordAddOptions
+      );
+      return;
+    }
+
+    bot.sendMessage(msg.chat.id, "Не понял тебя");
   } catch (error) {
-    console.log(error);
+    console.log(error.descriptions);
   }
 });
 
-bot.on("callback_query", function onCallbackQuery(callbackQuery) {
+bot.on("callback_query", async function onCallbackQuery(callbackQuery) {
   const action = callbackQuery.data;
   const msg = callbackQuery.message;
-  const opts = {
-    chat_id: msg.chat.id,
-    message_id: msg.message_id,
-  };
-  let text;
+  if (action === "newWord") {
+    await bot.sendMessage(
+      msg.chat.id,
+      "Введите слово и его перевод через запятую"
+    );
+    return;
+  }
+
+  if (action === "training") {
+    await getAllWords(msg.chat.id);
+
+    return;
+  }
 
   if (action === "next") {
-    bot.sendMessage(msg.chat.id, messageCreator(counter++), options);
+    if (counter < initialData.length) {
+      await bot.sendMessage(
+        msg.chat.id,
+        messageCreator(counter++),
+        wordOptions
+      );
+    } else {
+      counter = 0;
+      await bot.sendMessage(
+        msg.chat.id,
+        "Слова для изучения закончились",
+        startAgainOptions
+      );
+    }
+    return;
   }
+
   if (action === "stop") {
     counter = 0;
-    bot.sendMessage(msg.chat.id, "Вы остановили тренировку");
+    bot.sendMessage(msg.chat.id, "Вы остановили тренировку", {
+      disable_notification: true,
+    });
+    return;
   }
+
+  bot.sendMessage(msg.chat.id, "Не понял тебя");
 });
 
 // bot.on('text', async msg => {
