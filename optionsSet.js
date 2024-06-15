@@ -6,7 +6,7 @@ let initialOptions = {
   }),
 };
 
-let afterWordAddOptions = {
+let startOptions = {
   parse_mode: "HTML",
   disable_notification: true,
   reply_markup: JSON.stringify({
@@ -22,8 +22,10 @@ let wordOptions = {
   disable_notification: true,
   reply_markup: JSON.stringify({
     inline_keyboard: [
-      [{ text: "Далее", callback_data: "next" }],
-      [{ text: "Стоп", callback_data: "stop" }],
+      [
+        { text: "Далее", callback_data: "next" },
+        { text: "Стоп", callback_data: "stop" },
+      ],
     ],
   }),
 };
@@ -32,8 +34,8 @@ let startAgainOptions = {
   parse_mode: "HTML",
   disable_notification: true,
   reply_markup: JSON.stringify({
-    inline_keyboard: [[{ text: "Начать сначала", callback_data: "next" }]],
+    inline_keyboard: [[{ text: "Начать сначала", callback_data: "training" }]],
   }),
 };
 
-export { wordOptions, startAgainOptions, initialOptions, afterWordAddOptions };
+export { wordOptions, startAgainOptions, initialOptions, startOptions };
