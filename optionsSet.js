@@ -30,12 +30,4 @@ let wordOptions = {
   }),
 };
 
-let startAgainOptions = {
-  parse_mode: "HTML",
-  disable_notification: true,
-  reply_markup: JSON.stringify({
-    inline_keyboard: [[{ text: "Начать сначала", callback_data: "training" }]],
-  }),
-};
-
-export { wordOptions, startAgainOptions, initialOptions, startOptions };
+export { wordOptions, initialOptions, startOptions };
