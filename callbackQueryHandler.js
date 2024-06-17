@@ -17,39 +17,17 @@ export async function callbackQueryHandler(action, msg, bot) {
   try {
     switch (action) {
       case "newWord":
-        await bot.sendMessage(
-          msg.chat.id,
-          "Введите слово и перевод через тире\nhello - привет\nhome - дом, жилье",
-          startOptions
-        );
+        await newWordAdditionMessage(msg.chat.id, bot);
         break;
       case "training":
-        allWords[msg.chat.id] = await getAllWords(msg.chat.id);
-        let totalWordsMessage = await bot.sendMessage(
-          msg.chat.id,
-          `Всего слов: ${allWords[msg.chat.id].length}`
-        );
-        let wordsToEndMessage = await bot.sendMessage(
-          msg.chat.id,
-          `Слов до конца тренировки: ${allWords[msg.chat.id].length}`
-        );
-        messageToDelete[msg.chat.id] = [];
-        messageToDelete[msg.chat.id].push(
-          totalWordsMessage.message_id,
-          wordsToEndMessage.message_id
-        );
-        console.log(messageToDelete);
-        counter[msg.chat.id] = 0;
-        await sendWordsForUser(msg.chat.id, bot);
+        await startTraining(msg.chat.id, bot);
         break;
       case "next":
-        await editMessageText(msg.chat.id, bot);
+        await editCountToEndMessageText(msg.chat.id, bot);
         await sendWordsForUser(msg.chat.id, bot);
         break;
       case "stop":
-        counter[msg.chat.id] = 0;
-        deleteProgressMessages(msg.chat.id, bot);
-        bot.sendMessage(msg.chat.id, "Вы остановили тренировку", startOptions);
+        await stopTraining(msg.chat.id, bot);
         break;
       default:
         bot.sendMessage(msg.chat.id, "Не понял тебя callback_query");
@@ -63,6 +41,39 @@ export async function callbackQueryHandler(action, msg, bot) {
     }
   }
 }
+
+let stopTraining = async function (chatID, bot) {
+  counter[chatID] = 0;
+  deleteProgressMessages(chatID, bot);
+  bot.sendMessage(chatID, "Вы остановили тренировку", startOptions);
+};
+
+let startTraining = async function (chatID, bot) {
+  allWords[chatID] = await getAllWords(chatID);
+  let totalWordsMessage = await bot.sendMessage(
+    chatID,
+    `Всего слов: ${allWords[chatID].length}`
+  );
+  let wordsToEndMessage = await bot.sendMessage(
+    chatID,
+    `Слов до конца тренировки: ${allWords[chatID].length}`
+  );
+  messageToDelete[chatID] = [];
+  messageToDelete[chatID].push(
+    totalWordsMessage.message_id,
+    wordsToEndMessage.message_id
+  );
+  counter[chatID] = 0;
+  await sendWordsForUser(chatID, bot);
+};
+
+let newWordAdditionMessage = async function (chatID, bot) {
+  await bot.sendMessage(
+    chatID,
+    "Введите слово и перевод через тире\nhello - привет\nhome - дом, жилье",
+    startOptions
+  );
+};
 
 let sendWordsForUser = async function (id, bot) {
   if (counter[id] < allWords[id].length) {
@@ -93,7 +104,7 @@ let deleteProgressMessages = function (chatID, bot) {
   });
 };
 
-let editMessageText = async function name(chatID, bot) {
+let editCountToEndMessageText = async function name(chatID, bot) {
   let wordsToEnd = allWords[chatID].length - counter[chatID];
   await bot.editMessageText(`Слов до конца тренировки: ${wordsToEnd}`, {
     chat_id: chatID,
