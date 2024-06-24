@@ -52,11 +52,17 @@ let startTraining = async function (chatID, bot) {
   allWords[chatID] = await getAllWords(chatID);
   let totalWordsMessage = await bot.sendMessage(
     chatID,
-    `Всего слов: ${allWords[chatID].length}`
+    `Всего слов: ${allWords[chatID].length}`,
+    {
+      disable_notification: true,
+    }
   );
   let wordsToEndMessage = await bot.sendMessage(
     chatID,
-    `Слов до конца тренировки: ${allWords[chatID].length}`
+    `Слов до конца тренировки: ${allWords[chatID].length}`,
+    {
+      disable_notification: true,
+    }
   );
   messageToDelete[chatID] = [];
   messageToDelete[chatID].push(

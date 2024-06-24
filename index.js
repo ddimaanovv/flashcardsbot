@@ -16,6 +16,7 @@ import { botOnTextHandler } from "./botOnTextHandler.js";
 
 dotenv.config();
 try {
+  // eslint-disable-next-line
   const BOT_API = process.env.BOT_API;
   const bot = new TelegramBot(BOT_API, {
     polling: true,
