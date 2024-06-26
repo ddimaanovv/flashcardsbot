@@ -1,5 +1,10 @@
 import { getAllWords } from "./db.js";
-import { startOptions, wordOptions } from "./optionsSet.js";
+import {
+  addWordOption,
+  startOptions,
+  trainingStatOptions,
+  wordOptions,
+} from "./optionsSet.js";
 
 let counter = {}; // содержит id пользователей и счетчик их слов во время тренировки
 // {
@@ -11,26 +16,25 @@ let allWords = {}; // содержит id пользователей и масс
 //   id1: [{word:"qwe", translate: "qwe"}, {word:"asd", translate: "asd"}],
 //   id2: [{word:"qwe", translate: "qwe"}]
 // }
-let messageToDelete = {}; // содержит id пользователей и массив id сообщений которые необходио удалить после завершения тренировки
+let messageToEdit = {}; // содержит id пользователей и массив id сообщений (сейчас одно) которые необходио править в ходе тренировки
 
 export async function callbackQueryHandler(action, msg, bot) {
   try {
     switch (action) {
       case "newWord":
-        await newWordAdditionMessage(msg.chat.id, bot);
+        await newWordAdditionMessage(msg.chat.id, msg.message_id, bot);
         break;
       case "training":
-        await startTraining(msg.chat.id, bot);
+        await startTraining(msg.chat.id, msg.message_id, bot);
         break;
       case "next":
-        await editCountToEndMessageText(msg.chat.id, bot);
-        await sendWordsForUser(msg.chat.id, bot);
+        await sendWordsForUser(msg.chat.id, msg.message_id, bot);
         break;
       case "stop":
-        await stopTraining(msg.chat.id, bot);
+        await stopTraining(msg.chat.id, msg.message_id, bot);
         break;
       default:
-        bot.sendMessage(msg.chat.id, "Не понял тебя callback_query");
+        await bot.sendMessage(msg.chat.id, "Не понял тебя callback_query");
         break;
     }
   } catch (error) {
@@ -42,58 +46,75 @@ export async function callbackQueryHandler(action, msg, bot) {
   }
 }
 
-let stopTraining = async function (chatID, bot) {
+let stopTraining = async function (chatID, msgID, bot) {
   counter[chatID] = 0;
-  deleteProgressMessages(chatID, bot);
-  bot.sendMessage(chatID, "Вы остановили тренировку", startOptions);
+  await bot.editMessageText(`Вы остановили тренировку`, {
+    chat_id: chatID,
+    message_id: messageToEdit[chatID][0],
+    ...startOptions,
+  });
+  bot.deleteMessage(chatID, msgID);
 };
 
-let startTraining = async function (chatID, bot) {
+let startTraining = async function (chatID, msgID, bot) {
   allWords[chatID] = await getAllWords(chatID);
-  let totalWordsMessage = await bot.sendMessage(
-    chatID,
-    `Всего слов: ${allWords[chatID].length}`,
+  let totalWordsMessage = await bot.editMessageText(
+    `Всего слов: ${allWords[chatID].length}\nСлов до конца тренировки: ${allWords[chatID].length}`,
     {
-      disable_notification: true,
+      chat_id: chatID,
+      message_id: msgID,
+      ...trainingStatOptions,
     }
   );
-  let wordsToEndMessage = await bot.sendMessage(
-    chatID,
-    `Слов до конца тренировки: ${allWords[chatID].length}`,
-    {
-      disable_notification: true,
-    }
-  );
-  messageToDelete[chatID] = [];
-  messageToDelete[chatID].push(
-    totalWordsMessage.message_id,
-    wordsToEndMessage.message_id
-  );
+  messageToEdit[chatID] = [];
+  messageToEdit[chatID].push(totalWordsMessage.message_id);
   counter[chatID] = 0;
-  await sendWordsForUser(chatID, bot);
+  await sendWordsForUser(chatID, msgID, bot);
 };
 
-let newWordAdditionMessage = async function (chatID, bot) {
-  await bot.sendMessage(
-    chatID,
+let newWordAdditionMessage = async function (chatID, msgID, bot) {
+  await bot.editMessageText(
     "Введите слово и перевод через тире\nhello - привет\nhome - дом, жилье",
-    startOptions
+    {
+      chat_id: chatID,
+      message_id: msgID,
+      ...addWordOption,
+    }
   );
 };
 
-let sendWordsForUser = async function (id, bot) {
-  if (counter[id] < allWords[id].length) {
-    await bot.sendMessage(id, messageCreator(counter[id], id), wordOptions);
-    counter[id] = counter[id] + 1;
-  } else {
-    counter[id] = 0;
-    deleteProgressMessages(id, bot);
+let sendWordsForUser = async function (chatID, msgID, bot) {
+  if (counter[chatID] !== 0) await bot.deleteMessage(chatID, msgID); // удалить старое слово
+  if (counter[chatID] < allWords[chatID].length) {
+    await editCountToEndMessageText(chatID, bot);
     await bot.sendMessage(
-      id,
-      `Слов изучено: ${allWords[id].length}`,
-      startOptions
+      // отправить новое слово
+      chatID,
+      messageCreator(counter[chatID], chatID),
+      wordOptions
     );
+    counter[chatID] = counter[chatID] + 1;
+  } else {
+    counter[chatID] = 0;
+    await bot.editMessageText(`Слов изучено: ${allWords[chatID].length}`, {
+      chat_id: chatID,
+      message_id: messageToEdit[chatID][0],
+      ...startOptions,
+    });
   }
+};
+
+let editCountToEndMessageText = async function name(chatID, bot) {
+  if (counter[chatID] === 0) return; // при отправке первого слова редактировать текст не нужно
+  let wordsToEnd = allWords[chatID].length - counter[chatID];
+  await bot.editMessageText(
+    `Всего слов: ${allWords[chatID].length}\nСлов до конца тренировки: ${wordsToEnd}`,
+    {
+      chat_id: chatID,
+      message_id: messageToEdit[chatID][0],
+      ...trainingStatOptions,
+    }
+  );
 };
 
 let messageCreator = function (wordNumber, id) {
@@ -102,18 +123,4 @@ let messageCreator = function (wordNumber, id) {
     text = `${allWords[id][wordNumber].word} - <span class="tg-spoiler">${allWords[id][wordNumber].translate}</span>`;
   }
   return text;
-};
-
-let deleteProgressMessages = function (chatID, bot) {
-  messageToDelete[chatID].forEach((msgID) => {
-    bot.deleteMessage(chatID, msgID);
-  });
-};
-
-let editCountToEndMessageText = async function name(chatID, bot) {
-  let wordsToEnd = allWords[chatID].length - counter[chatID];
-  await bot.editMessageText(`Слов до конца тренировки: ${wordsToEnd}`, {
-    chat_id: chatID,
-    message_id: messageToDelete[chatID][1],
-  });
 };

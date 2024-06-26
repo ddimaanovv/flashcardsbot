@@ -28,7 +28,7 @@ export async function callbackQueryHandler(action, msg, bot) {
         await stopTraining(msg.chat.id, msg.message_id, bot);
         break;
       default:
-        bot.sendMessage(msg.chat.id, "Не понял тебя callback_query");
+        await bot.sendMessage(msg.chat.id, "Не понял тебя callback_query");
         break;
     }
   } catch (error) {
@@ -42,7 +42,7 @@ export async function callbackQueryHandler(action, msg, bot) {
 
 let stopTraining = async function (chatID, msgID, bot) {
   counter[chatID] = 0;
-  bot.editMessageText("Вы остановили тренировку", {
+  await bot.editMessageText("Вы остановили тренировку", {
     chat_id: chatID,
     message_id: msgID,
     ...startOptions,

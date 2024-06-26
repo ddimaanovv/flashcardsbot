@@ -1,8 +1,8 @@
 /**
 что нужно сделать:
-1) зарефакторить код в callbackQueryHandler.js чтобы он стал более декларативным, повынести все в отдельные функции, а то уже сложно читать
-2) есть артефакт с последним словом при изучении, на мгновение показывается "Слов до конца тренировки: 0", пофиксить
 3) возможно есть смысл не удалять слово при тренировке, а редактировать
+  - сделал два варианта, с удалением и редактированием, редактирование не работает, ибо если пользователь открыл спойлер,
+    то при редактировании спойлер не стрывается, нужно либо выходить из бота, либо немного отлистать вверх и вернуться, кароче отстой
 3) добавить рандом при изучении слов, а то сейчас они идут по порядку
 4) добавить тренировку с русского на английский, сейчас только с английского на русский
  
@@ -11,7 +11,7 @@
 // import imagemagic from "gm";
 import TelegramBot from "node-telegram-bot-api";
 import dotenv from "dotenv";
-import { callbackQueryHandler } from "./callbackQueryHandler.js";
+import { callbackQueryHandler } from "./callbackQueryHandler new.js";
 import { botOnTextHandler } from "./botOnTextHandler.js";
 
 dotenv.config();
@@ -28,14 +28,10 @@ try {
   });
 
   bot.on("callback_query", async function onCallbackQuery(callbackQuery) {
-    bot.deleteMessage(
-      callbackQuery.message.chat.id,
-      callbackQuery.message.message_id
-    );
     const action = callbackQuery.data;
     const msg = callbackQuery.message;
-    await bot.answerCallbackQuery(callbackQuery.id);
     await callbackQueryHandler(action, msg, bot);
+    await bot.answerCallbackQuery(callbackQuery.id);
   });
 } catch (error) {
   console.log(error.response.body);
